@@ -2,14 +2,29 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { Client, Collection, Events, GatewayIntentBits } = require("discord.js");
 const { token } = require("./config.json");
+const sequelize = require("./database.js");
+const User = require("./models/User.js");
+const Log = require("./models/Log.js");
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
-});
+// Associations for database
+User.hasMany(Log, { foreignKey: "userId" }); // each user can have multiple log entries
+Log.belongsTo(User, { foreignKey: "userId" }); // each log entry belongs to a single user
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, "commands");
 const commandFolders = fs.readdirSync(foldersPath);
+
+// Sync the database
+(async () => {
+  try {
+    await sequelize.sync();
+    console.log("Database synced successfully.");
+  } catch (error) {
+    console.log(`Database sync failed: ${error}`);
+  }
+})();
 
 for (const folder of commandFolders) {
   const commandsPath = path.join(foldersPath, folder);
