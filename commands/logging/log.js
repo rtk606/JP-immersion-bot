@@ -6,6 +6,11 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("log")
     .setDescription("Log your immersion")
+    // Title
+    .addStringOption((option) =>
+      option.setName("title").setDescription("title").setRequired(true)
+    )
+    // Media type
     .addStringOption((option) =>
       option
         .setName("media_type")
@@ -21,13 +26,16 @@ module.exports = {
           { name: "book", value: "book" }
         )
     )
+    // Amount immersed
     .addNumberOption((option) =>
       option
         .setName("amount")
         .setDescription("Enter the amount")
         .setRequired(true)
     ),
+  // TODO add time spent on task (?)
   async execute(interaction) {
+    const title = interaction.options.getString("title");
     const mediaType = interaction.options.getString("media_type");
     const amount = interaction.options.getNumber("amount");
     const userId = interaction.user.id;
@@ -41,15 +49,15 @@ module.exports = {
       return;
     }
 
-    // Ensure the user exists in the data base
+    // Ensure the user exists in the database
     let user = await User.findByPk(userId);
     if (!user) {
       user = await User.create({ userId: userId, userXp: 0 });
     }
 
-    // Store in database
+    // Store in database (TODO: give xp to user depending on amount and media type)
     try {
-      await Log.newLog(userId, amount, mediaType);
+      await Log.newLog(title, userId, amount, mediaType);
       await interaction.reply({
         content: "Log successfully created in database.",
         ephemeral: false,

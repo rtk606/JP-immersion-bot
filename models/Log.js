@@ -7,16 +7,25 @@ const Log = sequelize.define("Log", {
     primaryKey: true,
     autoIncrement: true,
   },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   duration: {
     type: DataTypes.INTEGER,
     allowNull: false,
   },
+  mediaType: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
 });
 
-Log.newLog = async function (userId, duration, mediaType) {
+Log.newLog = async function (title, userId, duration, mediaType) {
   try {
     const log = Log.create({
       userId: userId,
+      title: title,
       duration: duration,
       mediaType: mediaType,
     });
