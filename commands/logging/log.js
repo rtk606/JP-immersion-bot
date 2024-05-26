@@ -17,7 +17,7 @@ module.exports = {
         .setDescription("Options")
         .setRequired(true)
         .addChoices(
-          { name: "vn", value: "visual novel" },
+          { name: "visual novel", value: "visual novel" },
           { name: "anime", value: "anime" },
           { name: "manga", value: "manga" },
           { name: "listening", value: "listening" },
