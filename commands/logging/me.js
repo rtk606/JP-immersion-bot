@@ -29,20 +29,33 @@ module.exports = {
     const userId = interaction.user.id;
     const range = interaction.options.getString("range");
 
-    let startDate;
-    let endDate = new Date();
+    let startDate,
+      endDate = new Date();
+    let earliestLog;
+
+    if (range === "yearly" || range === "monthly") {
+      earliestLog = await Log.findOne({
+        where: { userId: userId },
+        order: [["createdAt", "ASC"]],
+      });
+    }
 
     switch (range) {
       case "weekly":
         startDate = new Date();
-        startDate.setDate(endDate.getDate() - 7);
+        startDate.setDate(endDate.getDate() - 6); // Include today and go back 6 more days
         break;
       case "monthly":
         startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
         break;
-      // TODO change this to all
       case "yearly":
-        startDate = new Date(endDate.getFullYear(), 0, 1);
+        if (earliestLog) {
+          startDate = new Date(earliestLog.createdAt);
+          startDate.setDate(1);
+          startDate.setMonth(startDate.getMonth());
+        } else {
+          startDate = new Date(endDate.getFullYear(), 0, 1);
+        }
         break;
     }
 
@@ -55,7 +68,6 @@ module.exports = {
       },
     });
 
-    // Safety check, check if logs array is empty
     if (!logs.length) {
       await interaction.editReply({
         content: "No logs found for the specified time range.",
@@ -64,21 +76,41 @@ module.exports = {
       return;
     }
 
-    let uniqueDateLabels = {};
+    let allDates = {};
+    let currentDate = new Date(startDate);
+    let labelFormatOptions =
+      range === "yearly"
+        ? { month: "short", year: "numeric" }
+        : { day: "2-digit", month: "short" };
+
+    while (currentDate <= endDate) {
+      let label = currentDate.toLocaleDateString("en-GB", labelFormatOptions);
+      allDates[label] = {};
+      if (range === "yearly") {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+      } else {
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+    }
+
+    let mediaTypeDurations = {};
+
     logs.forEach((log) => {
-      const logDate = new Date(log.createdAt).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      const logDate = new Date(log.createdAt).toLocaleDateString(
+        "en-GB",
+        labelFormatOptions
+      );
       const points = Log.calculatePoints(log.mediaType, log.duration);
-      if (!uniqueDateLabels[logDate]) {
-        uniqueDateLabels[logDate] = {};
+
+      if (!allDates[logDate]) {
+        allDates[logDate] = {};
       }
-      if (!uniqueDateLabels[logDate][log.mediaType]) {
-        uniqueDateLabels[logDate][log.mediaType] = 0;
+      allDates[logDate][log.mediaType] = points || 0;
+
+      if (!mediaTypeDurations[log.mediaType]) {
+        mediaTypeDurations[log.mediaType] = 0;
       }
-      uniqueDateLabels[logDate][log.mediaType] += points;
+      mediaTypeDurations[log.mediaType] += log.duration;
     });
 
     let datasets = [];
@@ -100,8 +132,8 @@ module.exports = {
         stack: "stack 0",
       };
 
-      Object.keys(uniqueDateLabels).forEach((date) => {
-        dataset.data.push(uniqueDateLabels[date][mediaType] || 0);
+      Object.keys(allDates).forEach((date) => {
+        dataset.data.push(allDates[date][mediaType] || 0);
       });
 
       datasets.push(dataset);
@@ -124,7 +156,7 @@ module.exports = {
     chart.setConfig({
       type: "bar",
       data: {
-        labels: Object.keys(uniqueDateLabels),
+        labels: Object.keys(allDates),
         datasets: datasets,
       },
       options: {
@@ -161,20 +193,8 @@ module.exports = {
     await chart.toFile(__dirname + "/chart.png");
     const image = new AttachmentBuilder(__dirname + "/chart.png");
 
-    let breakdown = datasets
-      .map((ds) => {
-        const totalPoints = ds.data.reduce((a, b) => a + b, 0);
-        return {
-          label: ds.label,
-          points: totalPoints,
-        };
-      })
-      .filter((ds) => ds.points > 0) // Filter out datasets where total points are 0
-      .map((ds) => `${ds.label}: ${ds.points.toFixed(2)} pts`) // Format points to two decimal places
-      .join("\n");
-
     const embed = new EmbedBuilder()
-      .setTitle("Monthly Overview")
+      .setTitle(`${range[0].toUpperCase() + range.slice(1)} Overview`)
       .setThumbnail(interaction.user.avatarURL())
       .setColor("#00b7ff")
       .setImage("attachment://chart.png")
@@ -189,8 +209,7 @@ module.exports = {
             .toFixed(2)
             .toString(),
           inline: true,
-        },
-        { name: "**Breakdown**", value: breakdown, inline: false }
+        }
       );
 
     await interaction.editReply({ embeds: [embed], files: [image] });

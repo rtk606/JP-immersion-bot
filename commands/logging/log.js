@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
 const User = require("../../models/User.js");
 const Log = require("../../models/Log.js");
 
@@ -6,11 +6,9 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName("log")
     .setDescription("Log your immersion")
-    // Title
     .addStringOption((option) =>
       option.setName("title").setDescription("title").setRequired(true)
     )
-    // Media type
     .addStringOption((option) =>
       option
         .setName("media_type")
@@ -26,21 +24,19 @@ module.exports = {
           { name: "book", value: "book" }
         )
     )
-    // Amount immersed
     .addNumberOption((option) =>
       option
         .setName("amount")
         .setDescription("Enter the amount")
         .setRequired(true)
     ),
-  // TODO add time spent on task (?)
   async execute(interaction) {
     const title = interaction.options.getString("title");
     const mediaType = interaction.options.getString("media_type");
     const amount = interaction.options.getNumber("amount");
     const userId = interaction.user.id;
+    const username = interaction.user.username;
 
-    // Sanity check
     if (amount < 1) {
       await interaction.reply({
         content: "The amount must be greater than 0.",
@@ -49,23 +45,37 @@ module.exports = {
       return;
     }
 
-    // Ensure the user exists in the database
     let user = await User.findByPk(userId);
     if (!user) {
       user = await User.create({ userId: userId, userXp: 0 });
     }
 
-    // Store in database (TODO: give xp to user depending on amount and media type)
     try {
-      await Log.newLog(title, userId, amount, mediaType);
-      await interaction.reply({
-        content: "Log successfully created in database.",
-        ephemeral: false,
-      });
+      const log = await Log.newLog(title, userId, amount, mediaType);
+      const xpEarned = Log.calculatePoints(mediaType, amount); // Assume 'points' are returned from the newLog method
+      const embed = new EmbedBuilder()
+        .setColor(0x0099ff)
+        .setTitle(`${username} logged immersion 🥳`)
+        .setDescription(
+          "Immersion logged. Use /me to view your immersion history.\n Use /leaderboard to view the global immersion leaderboard."
+        )
+        .setThumbnail(interaction.user.avatarURL())
+        .setImage(
+          "https://www.menudo-fansub.com/mkportal/modules/proyectos/archivos/314_por_bannerpeliwapa2.png"
+        )
+        .addFields(
+          { name: "Title: ", value: title, inline: true },
+          { name: "Media Type: ", value: mediaType, inline: true },
+          { name: "XP Earned: ", value: `${xpEarned} XP` }
+        )
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: false });
     } catch (error) {
+      console.error("Error during log creation:", error);
       await interaction.reply({
         content: "There was an error logging your immersion.",
-        ephemeral: false,
+        ephemeral: true,
       });
     }
   },
