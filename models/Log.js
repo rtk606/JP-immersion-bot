@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database");
+const User = require("./User");
 
 const Log = sequelize.define("Log", {
   logId: {
@@ -22,41 +23,48 @@ const Log = sequelize.define("Log", {
 });
 
 // A function to calculate points based on media type and duration
-function calculatePoints(mediaType, duration) {
+Log.calculatePoints = function (mediaType, duration) {
   let points;
   switch (mediaType.toLowerCase()) {
     case "book":
+      // "1 point per page" means 1 point for each unit of duration.
       points = duration;
       break;
     case "manga":
-      points = duration * 5;
+      // "0.2 points per page" means each unit of duration is worth 0.2 points.
+      points = duration * 0.2;
       break;
     case "visual novel":
-      points = duration * 350;
+      // "1/350 points/character" means each unit of duration is worth 1/350 points.
+      points = duration / 350;
       break;
     case "anime":
-      points = duration / 9.5;
+      // "9.5 points per episode" means each unit of duration is worth 9.5 points.
+      points = duration * 9.5;
       break;
     case "listening":
-      points = duration / 0.45;
+      // "0.45 points/min of listening" means each unit of duration is worth 0.45 points.
+      points = duration * 0.45;
       break;
     case "readtime":
-      points = duration / 0.45;
+      // "0.45 points/min of reading time" means each unit of duration is worth 0.45 points.
+      points = duration * 0.45;
       break;
     case "reading":
-      points = duration * 350;
+      // "1/350 points/character of reading" means each unit of duration is worth 1/350 points.
+      points = duration / 350;
       break;
     default:
       throw new Error(`Unknown media type: ${mediaType}`);
   }
   return points;
-}
+};
 
 // A method for creating a new log entry and calculating XP
 Log.newLog = async function (title, userId, duration, mediaType) {
   try {
     const user = await User.findByPk(userId);
-    const points = calculatePoints(mediaType, duration);
+    const points = Log.calculatePoints(mediaType, duration);
     // Update user's XP
     user.userXp += points;
     await user.save();

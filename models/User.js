@@ -14,14 +14,3 @@ const User = sequelize.define("user", {
 });
 
 module.exports = User;
-
-/* 
-   Example table
-    __________________________
-   | userId     |  userXp    |
-   |____________|____________|
-   | RTK        |   232      |
-   |____________|____________|
-   | DJ         |   335      |
-   |____________|____________|
-*/
