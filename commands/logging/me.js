@@ -77,6 +77,7 @@ module.exports = {
     }
 
     let allDates = {};
+    let mediaTypeDurations = {};
     let currentDate = new Date(startDate);
     let labelFormatOptions =
       range === "yearly"
@@ -92,8 +93,6 @@ module.exports = {
         currentDate.setDate(currentDate.getDate() + 1);
       }
     }
-
-    let mediaTypeDurations = {};
 
     logs.forEach((log) => {
       const logDate = new Date(log.createdAt).toLocaleDateString(
@@ -152,6 +151,39 @@ module.exports = {
       return colors[mediaType] || "#FFFFFF";
     }
 
+    function formatPointsWithUnits(mediaType, duration) {
+      const units = {
+        "visual novel": "chars",
+        anime: "minutes",
+        manga: "pages",
+        listening: "minutes",
+        reading: "chars",
+        readtime: "minutes",
+        book: "pages",
+      };
+      const unit = units[mediaType] || "units";
+      return `${Number(duration).toLocaleString()} ${unit}`;
+    }
+
+    let breakdown = datasets
+      .map((ds) => {
+        const totalPoints = ds.data.reduce((a, b) => a + b, 0);
+        const totalDuration = mediaTypeDurations[ds.label] || 0;
+        if (totalPoints > 0) {
+          const formattedDuration = formatPointsWithUnits(
+            ds.label,
+            totalDuration
+          );
+          return `${ds.label.toUpperCase()}: ${formattedDuration} → ${totalPoints.toLocaleString(
+            undefined,
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+          )} pts`; // Format the points with commas and two decimal places
+        }
+        return null;
+      })
+      .filter((ds) => ds) // Remove null entries for media types with 0 points
+      .join("\n");
+
     const chart = new QuickChart();
     chart.setConfig({
       type: "bar",
@@ -206,9 +238,16 @@ module.exports = {
           value: datasets
             .map((ds) => ds.data.reduce((a, b) => a + b, 0))
             .reduce((a, b) => a + b, 0)
-            .toFixed(2)
-            .toString(),
+            .toLocaleString(undefined, {
+              minimumFractionDigits: 4,
+              maximumFractionDigits: 4,
+            }),
           inline: true,
+        },
+        {
+          name: "**Breakdown**",
+          value: breakdown,
+          inline: false,
         }
       );
 

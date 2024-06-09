@@ -5,7 +5,8 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.isChatInputCommand()) return;
 
-    const command = interaction.client.commands.get(interaction.commandName);
+    const client = interaction.client;
+    const command = client.commands.get(interaction.commandName);
 
     if (!command) {
       console.error(
@@ -15,7 +16,7 @@ module.exports = {
     }
 
     try {
-      await command.execute(interaction);
+      await command.execute(interaction, client);
     } catch (error) {
       console.error(error);
       if (interaction.replied || interaction.deferred) {

@@ -52,7 +52,7 @@ module.exports = {
 
     try {
       const log = await Log.newLog(title, userId, amount, mediaType);
-      const xpEarned = Log.calculatePoints(mediaType, amount); // Assume 'points' are returned from the newLog method
+      const xpEarned = Log.calculatePoints(mediaType, amount);
       const embed = new EmbedBuilder()
         .setColor(0x0099ff)
         .setTitle(`${username} logged immersion 🥳`)
