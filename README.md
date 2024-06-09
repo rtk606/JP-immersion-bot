@@ -27,7 +27,7 @@ A Discord bot for logging/tracking Japanese language learning immersion. Log imm
 Run the following:
 
 ```
-git clone https://github.com/rtk606/JP-immersion-bot.git
+git clone https://github.com/rtk606/Japanese-immersion-bot.git
 cd JP-immersion-bot
 npm install
 ```
