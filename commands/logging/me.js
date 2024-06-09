@@ -154,7 +154,7 @@ module.exports = {
     function formatPointsWithUnits(mediaType, duration) {
       const units = {
         "visual novel": "chars",
-        anime: "minutes",
+        anime: "episodes",
         manga: "pages",
         listening: "minutes",
         reading: "chars",
